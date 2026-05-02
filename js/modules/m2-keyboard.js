@@ -57,11 +57,11 @@ const REVERSE_DIRECTION = Object.freeze({
  *
  * The Game instance must expose:
  *   - game.move(direction: 'UP'|'DOWN'|'LEFT'|'RIGHT'): void
- *   - game.gameOver: boolean  (or game.isGameOver(): boolean)
+ *   - game.getState(): { snake, food, score, gameOver }
  */
 class KeyboardController {
   /**
-   * @param {Object} game - Game instance (from M1) with move() and gameOver.
+   * @param {Object} game - Game instance (from M1) with move() and getState().
    * @throws {Error} If game is not provided or doesn't implement move().
    */
   constructor(game) {
@@ -70,6 +70,9 @@ class KeyboardController {
     }
     if (typeof game.move !== 'function') {
       throw new Error('game instance must implement move(direction)');
+    }
+    if (typeof game.getState !== 'function') {
+      throw new Error('game instance must implement getState()');
     }
 
     /** @private */ this._game = game;
@@ -163,26 +166,23 @@ class KeyboardController {
 
   /**
    * Checks whether the game is in a game-over state.
-   * Supports both property-style (game.gameOver) and method-style
-   * (game.isGameOver()).  If neither is available, defaults to false
-   * (allow input).
+   *
+   * Uses the M1 Game interface contract: getState() returns an object
+   * with a { gameOver } boolean field. If getState() is unavailable or
+   * returns a falsy value, defaults to false (allow input).
    *
    * @returns {boolean}
    * @private
    */
   _isGameOver() {
-    const game = this._game;
-
-    if (typeof game.isGameOver === 'function') {
-      return Boolean(game.isGameOver());
+    try {
+      const state = this._game.getState();
+      return Boolean(state && state.gameOver);
+    } catch (_err) {
+      // If getState() throws (unexpected), default to false to keep
+      // the keyboard operational rather than locking the user out.
+      return false;
     }
-
-    if ('gameOver' in game) {
-      return Boolean(game.gameOver);
-    }
-
-    // No game-over indicator found — allow input by default
-    return false;
   }
 }
 

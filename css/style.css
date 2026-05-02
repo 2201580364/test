@@ -1,0 +1,209 @@
+/* ────────────────────────────────────────────────────────────────
+   Snake Game – Stylesheet
+   ──────────────────────────────────────────────────────────────── */
+
+/* Reset & base */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  color: #e0e0e0;
+  background: #0f0f23;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 2rem 1rem;
+}
+
+/* ── Layout ──────────────────────────────────────────────────── */
+
+.game-container {
+  max-width: 720px;
+  width: 100%;
+}
+
+.game-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #00d2ff;
+  margin-bottom: 1rem;
+}
+
+.game-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.game-main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.game-sidebar {
+  flex: 0 0 220px;
+  min-width: 200px;
+}
+
+/* ── Canvas ──────────────────────────────────────────────────── */
+
+#game-canvas {
+  display: block;
+  border: 2px solid #16213e;
+  border-radius: 4px;
+  background: #1a1a2e;
+}
+
+/* ── HUD ─────────────────────────────────────────────────────── */
+
+.game-hud {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1.2rem;
+}
+
+.score-label {
+  color: #aaa;
+}
+
+#score-display {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #ff6b6b;
+  min-width: 3ch;
+  text-align: right;
+}
+
+/* ── Controls ────────────────────────────────────────────────── */
+
+.game-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.game-controls button {
+  padding: 0.4rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #fff;
+  background: #16213e;
+  transition: background 0.15s ease;
+}
+
+.game-controls button:hover {
+  background: #1f3460;
+}
+
+.game-controls button:active {
+  background: #0f1a30;
+}
+
+#btn-restart {
+  background: #00d2ff;
+  color: #0f0f23;
+}
+
+#btn-restart:hover {
+  background: #33ddff;
+}
+
+#btn-restart:active {
+  background: #00b8e6;
+}
+
+/* ── Leaderboard ─────────────────────────────────────────────── */
+
+.snake-leaderboard {
+  background: #1a1a2e;
+  border: 1px solid #16213e;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.snake-leaderboard__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #00d2ff;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.snake-leaderboard__empty {
+  color: #888;
+  font-size: 0.85rem;
+  text-align: center;
+  font-style: italic;
+}
+
+.snake-leaderboard__list {
+  list-style: none;
+  counter-reset: rank;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.snake-leaderboard__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.9rem;
+  counter-increment: rank;
+}
+
+.snake-leaderboard__item::before {
+  content: counter(rank) ".";
+  color: #666;
+  margin-right: 0.4rem;
+  min-width: 1.5em;
+}
+
+.snake-leaderboard__score {
+  font-weight: 700;
+  color: #ff6b6b;
+  font-variant-numeric: tabular-nums;
+}
+
+.snake-leaderboard__date {
+  color: #666;
+  font-size: 0.75rem;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .game-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .game-sidebar {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 300px;
+  }
+}

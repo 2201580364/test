@@ -1,0 +1,263 @@
+/* ==========================================================================
+   Snake Game – Stylesheet
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Reset & base
+   -------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #0f0f23;
+  color: #e0e0e0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 2rem 1rem;
+}
+
+/* --------------------------------------------------------------------------
+   Game container
+   -------------------------------------------------------------------------- */
+
+.game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  max-width: 560px;
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   Header
+   -------------------------------------------------------------------------- */
+
+.game-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.game-title {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #00d2ff;
+  text-shadow: 0 0 12px rgba(0, 210, 255, 0.4);
+}
+
+.score-panel {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  background: #1a1a2e;
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  border: 1px solid #2a2a4a;
+}
+
+.score-label {
+  font-size: 0.9rem;
+  color: #8888aa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.score-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ff6b6b;
+  font-variant-numeric: tabular-nums;
+  min-width: 3ch;
+  text-align: right;
+}
+
+/* --------------------------------------------------------------------------
+   Canvas area
+   -------------------------------------------------------------------------- */
+
+.game-area {
+  border: 2px solid #2a2a4a;
+  border-radius: 4px;
+  overflow: hidden;
+  line-height: 0; /* removes gap beneath canvas */
+  box-shadow: 0 0 24px rgba(0, 210, 255, 0.08);
+}
+
+#game-canvas {
+  display: block;
+  background: #1a1a2e;
+}
+
+/* --------------------------------------------------------------------------
+   Controls
+   -------------------------------------------------------------------------- */
+
+.game-controls {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease,
+    box-shadow 0.15s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:focus-visible {
+  outline: 2px solid #00d2ff;
+  outline-offset: 2px;
+}
+
+/* Start */
+.btn-start {
+  background: #00b894;
+  color: #ffffff;
+}
+.btn-start:hover {
+  background: #00a381;
+  box-shadow: 0 4px 16px rgba(0, 184, 148, 0.35);
+}
+
+/* Pause */
+.btn-pause {
+  background: #fdcb6e;
+  color: #1a1a2e;
+}
+.btn-pause:hover {
+  background: #e0b44c;
+  box-shadow: 0 4px 16px rgba(253, 203, 110, 0.35);
+}
+
+/* Restart */
+.btn-restart {
+  background: #6c5ce7;
+  color: #ffffff;
+}
+.btn-restart:hover {
+  background: #5a4bd1;
+  box-shadow: 0 4px 16px rgba(108, 92, 231, 0.35);
+}
+
+/* --------------------------------------------------------------------------
+   Leaderboard (M4 populates .snake-leaderboard inside the container)
+   -------------------------------------------------------------------------- */
+
+.leaderboard {
+  width: 100%;
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+/* Override / complement M4-generated classes */
+.snake-leaderboard__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #00d2ff;
+  margin-bottom: 0.75rem;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.snake-leaderboard__empty {
+  color: #666680;
+  text-align: center;
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+.snake-leaderboard__list {
+  list-style: decimal;
+  padding-left: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.snake-leaderboard__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid #2a2a4a;
+  font-size: 0.95rem;
+}
+
+.snake-leaderboard__item:last-child {
+  border-bottom: none;
+}
+
+.snake-leaderboard__score {
+  font-weight: 700;
+  color: #ff6b6b;
+  font-variant-numeric: tabular-nums;
+}
+
+.snake-leaderboard__date {
+  color: #8888aa;
+  font-size: 0.8rem;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive tweaks
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 520px) {
+  body {
+    padding: 1rem 0.5rem;
+  }
+
+  .game-title {
+    font-size: 1.5rem;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  #game-canvas {
+    max-width: 100%;
+    height: auto;
+  }
+}

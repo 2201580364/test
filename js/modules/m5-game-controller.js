@@ -5,16 +5,25 @@
  * into a complete playable game with:
  *   - requestAnimationFrame game loop
  *   - Game-over → score save → leaderboard display flow
- *   - Start / Pause / Restart controls
+ *   - Start / Pause / Restart controls via data-action buttons
  *
  * API Contract:
- *   init(config: { canvasId, scoreElementId, leaderboardContainerId }): void
+ *   POST /controller/init
+ *     Body: { canvasId: string, scoreElementId: string, leaderboardContainerId: string }
+ *     Returns: void
+ *
+ * Interface:
+ *   function initGame(config: {
+ *     canvasId: string,
+ *     scoreElementId: string,
+ *     leaderboardContainerId: string
+ *   }): void;
  *
  * @module m5-game-controller
  */
 
 import { Game } from './m1-game-core.js';
-import KeyboardController from './m2-keyboard.js';
+import { KeyboardController } from './m2-keyboard.js';
 import { Renderer } from './m3-renderer.js';
 import { saveScore, renderLeaderboard } from './m4-scoreboard.js';
 
@@ -45,16 +54,16 @@ let _renderer = null;
 /** @type {KeyboardController|null} */
 let _keyboard = null;
 
-/** @type {boolean} */
+/** @type {boolean} Whether the game loop is actively requesting frames. */
 let _running = false;
 
-/** @type {boolean} */
+/** @type {boolean} Whether the game is currently paused. */
 let _paused = false;
 
-/** @type {number|null} */
+/** @type {number|null} Current requestAnimationFrame handle. */
 let _animationFrameId = null;
 
-/** @type {number} */
+/** @type {number} Timestamp of the last game tick (ms). */
 let _lastTickTime = 0;
 
 /** @type {HTMLElement|null} */
@@ -66,13 +75,20 @@ let _leaderboardContainer = null;
 /** @type {HTMLCanvasElement|null} */
 let _canvas = null;
 
+/** @type {Object|null} Stored config for restart. */
+let _config = null;
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 /**
  * Initialize the entire game: creates Game, Renderer, KeyboardController,
- * wires the game loop, and binds UI controls.
+ * wires the game loop, and binds UI controls (start / pause / restart).
+ *
+ * Matches API contract:
+ *   POST /controller/init
+ *   Body: { canvasId: string, scoreElementId: string, leaderboardContainerId: string }
  *
  * @param {{ canvasId: string, scoreElementId: string, leaderboardContainerId: string }} config
  * @returns {void}
@@ -126,10 +142,89 @@ function initGame(config) {
   }
 
   // ── Store references ─────────────────────────────────────────────────
+  _config = config;
   _canvas = canvas;
   _scoreElement = scoreEl;
   _leaderboardContainer = leaderboardEl;
 
+  // ── Wire UI buttons (data-action attributes) ─────────────────────────
+  _bindUIControls();
+
+  // ── Build the game world ─────────────────────────────────────────────
+  _buildGame();
+
+  // ── Render leaderboard on init ───────────────────────────────────────
+  try {
+    renderLeaderboard(_leaderboardContainer);
+  } catch (_err) {
+    // Leaderboard rendering is non-critical; log and continue.
+    console.error('initGame: failed to render leaderboard', _err);
+  }
+
+  // ── Start the game loop ──────────────────────────────────────────────
+  _startLoop();
+}
+
+// ---------------------------------------------------------------------------
+// Public control methods (accessible via data-action buttons)
+// ---------------------------------------------------------------------------
+
+/**
+ * Start (or restart) the game. If a previous game was running it is
+ * torn down cleanly first.
+ *
+ * @returns {void}
+ */
+function startGame() {
+  // If a game is currently running, stop and rebuild
+  if (_game) {
+    _teardownGame();
+  }
+  _buildGame();
+  _startLoop();
+}
+
+/**
+ * Toggle pause state.
+ *
+ * @returns {void}
+ */
+function togglePause() {
+  if (!_game) {
+    return;
+  }
+
+  _paused = !_paused;
+
+  if (!_paused) {
+    // Resuming: reset last-tick so we don't get a huge time delta
+    _lastTickTime = 0;
+    if (!_running && !_game.gameOver) {
+      _startLoop();
+    }
+  }
+}
+
+/**
+ * Restart the game from scratch (full reset).
+ *
+ * @returns {void}
+ */
+function restartGame() {
+  _teardownGame();
+  _buildGame();
+  _startLoop();
+}
+
+// ---------------------------------------------------------------------------
+// Internal: game lifecycle
+// ---------------------------------------------------------------------------
+
+/**
+ * Create fresh Game, Renderer, and KeyboardController instances.
+ * @private
+ */
+function _buildGame() {
   // ── Create game core ─────────────────────────────────────────────────
   _game = new Game(GRID_WIDTH, GRID_HEIGHT);
   _game.start();
@@ -144,22 +239,55 @@ function initGame(config) {
   // ── Wire game-over handler ───────────────────────────────────────────
   _game.onGameOver(_onGameOver);
 
-  // ── Do initial render (shows starting state) ─────────────────────────
+  // ── Initial render ───────────────────────────────────────────────────
+  _renderFrame();
   _renderScore();
 
-  // ── Render leaderboard on init ───────────────────────────────────────
-  renderLeaderboard(_leaderboardContainer);
+  _paused = false;
+}
 
-  // ── Start the game loop ──────────────────────────────────────────────
-  _running = true;
+/**
+ * Tear down current game resources (stop keyboard, cancel animation).
+ * @private
+ */
+function _teardownGame() {
+  // Cancel animation loop
+  if (_animationFrameId !== null) {
+    cancelAnimationFrame(_animationFrameId);
+    _animationFrameId = null;
+  }
+  _running = false;
   _paused = false;
   _lastTickTime = 0;
-  _animationFrameId = requestAnimationFrame(_gameLoop);
+
+  // Stop keyboard listener
+  if (_keyboard) {
+    _keyboard.stop();
+    _keyboard = null;
+  }
+
+  // Drop references
+  _game = null;
+  _renderer = null;
 }
 
 // ---------------------------------------------------------------------------
 // Game loop
 // ---------------------------------------------------------------------------
+
+/**
+ * Begin (or resume) the requestAnimationFrame loop.
+ * @private
+ */
+function _startLoop() {
+  if (_running) {
+    return;
+  }
+  _running = true;
+  _paused = false;
+  _lastTickTime = 0;
+  _animationFrameId = requestAnimationFrame(_gameLoop);
+}
 
 /**
  * Main game loop driven by requestAnimationFrame.
@@ -180,9 +308,15 @@ function _gameLoop(timestamp) {
     return;
   }
 
-  // Initialise last-tick on first frame after resume
+  // Initialise last-tick on first frame after resume / start
   if (_lastTickTime === 0) {
     _lastTickTime = timestamp;
+    return;
+  }
+
+  // If the game is already over, stop requesting frames
+  if (_game && _game.gameOver) {
+    _stopLoop();
     return;
   }
 
@@ -191,7 +325,11 @@ function _gameLoop(timestamp) {
   if (elapsed >= TICK_INTERVAL) {
     // Advance game state
     if (_game && !_game.gameOver) {
-      _game.move(_game.direction);
+      try {
+        _game.move(_game.direction);
+      } catch (_err) {
+        console.error('Game.move() threw an error:', _err);
+      }
     }
 
     // Render current state
@@ -204,13 +342,27 @@ function _gameLoop(timestamp) {
     _lastTickTime = timestamp - (elapsed % TICK_INTERVAL);
   }
 
-  // If game just ended, stop the animation loop (no further ticks needed)
-  if (_game && _game.gameOver && _animationFrameId !== null) {
-    cancelAnimationFrame(_animationFrameId);
-    _animationFrameId = null;
-    _running = false;
+  // Double-check: if game just ended during this tick, stop the loop
+  if (_game && _game.gameOver) {
+    _stopLoop();
   }
 }
+
+/**
+ * Halt the animation loop gracefully.
+ * @private
+ */
+function _stopLoop() {
+  if (_animationFrameId !== null) {
+    cancelAnimationFrame(_animationFrameId);
+    _animationFrameId = null;
+  }
+  _running = false;
+}
+
+// ---------------------------------------------------------------------------
+// Rendering helpers
+// ---------------------------------------------------------------------------
 
 /**
  * Render a single frame.
@@ -232,7 +384,11 @@ function _renderFrame() {
     isGameOver: state.gameOver,
   };
 
-  _renderer.render(renderState);
+  try {
+    _renderer.render(renderState);
+  } catch (_err) {
+    console.error('Renderer.render() threw an error:', _err);
+  }
 }
 
 /**
@@ -244,6 +400,71 @@ function _renderScore() {
     return;
   }
   _scoreElement.textContent = String(_game.score);
+}
+
+// ---------------------------------------------------------------------------
+// UI bindings
+// ---------------------------------------------------------------------------
+
+/**
+ * Find all elements with [data-game-action] attributes and bind click
+ * handlers for start, pause, and restart actions.
+ *
+ * Supported actions:
+ *   data-game-action="start"   – calls startGame()
+ *   data-game-action="pause"   – calls togglePause()
+ *   data-game-action="restart" – calls restartGame()
+ *
+ * @private
+ */
+function _bindUIControls() {
+  const actionButtons = document.querySelectorAll('[data-game-action]');
+
+  for (const btn of actionButtons) {
+    // Avoid double-binding
+    if (btn.dataset.gameActionBound === 'true') {
+      continue;
+    }
+    btn.dataset.gameActionBound = 'true';
+
+    const action = btn.dataset.gameAction;
+
+    btn.addEventListener('click', (event) => {
+      event.preventDefault();
+
+      switch (action) {
+        case 'start':
+          startGame();
+          break;
+        case 'pause':
+          togglePause();
+          // Update button text to reflect toggle state
+          _updatePauseButtonLabel();
+          break;
+        case 'restart':
+          restartGame();
+          // Reset pause button label if it was changed
+          _updatePauseButtonLabel();
+          break;
+        default:
+          console.warn(
+            `Unknown data-game-action "${action}". Supported: start, pause, restart.`
+          );
+      }
+    });
+  }
+}
+
+/**
+ * Update the text content of any pause button to reflect current state.
+ * @private
+ */
+function _updatePauseButtonLabel() {
+  const pauseButtons = document.querySelectorAll('[data-game-action="pause"]');
+  const label = _paused ? 'Resume' : 'Pause';
+  for (const btn of pauseButtons) {
+    btn.textContent = label;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -260,12 +481,20 @@ function _renderScore() {
 function _onGameOver(finalState) {
   // Save the final score
   if (finalState && typeof finalState.score === 'number') {
-    saveScore(finalState.score);
+    try {
+      saveScore(finalState.score);
+    } catch (_err) {
+      console.error('Failed to save score:', _err);
+    }
   }
 
   // Re-render leaderboard with the new entry
   if (_leaderboardContainer) {
-    renderLeaderboard(_leaderboardContainer);
+    try {
+      renderLeaderboard(_leaderboardContainer);
+    } catch (_err) {
+      console.error('Failed to render leaderboard after game over:', _err);
+    }
   }
 }
 
@@ -273,4 +502,4 @@ function _onGameOver(finalState) {
 // Exports
 // ---------------------------------------------------------------------------
 
-export { initGame };
+export { initGame, startGame, togglePause, restartGame };

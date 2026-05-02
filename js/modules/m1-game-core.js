@@ -5,7 +5,9 @@
  * score calculation. No rendering or input handling.
  *
  * API Contracts:
- *   create(gridWidth?, gridHeight?) → Game instance
+ *   CREATE /game-core/Game
+ *     Body: { gridWidth?: number (default 20), gridHeight?: number (default 20) }
+ *     Returns: Game instance with methods: move(direction), getState(), reset(), isGameOver()
  *
  * Interfaces:
  *   class Game {
@@ -16,6 +18,8 @@
  *     reset(): void
  *     onGameOver(callback: Function): void
  *   }
+ *
+ * @module m1-game-core
  */
 
 // ---------------------------------------------------------------------------
@@ -38,17 +42,42 @@ const OPPOSITE_DIRECTION = Object.freeze({
 });
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Validate and sanitise a grid dimension value.
+ * Must be a finite number >= 4.
+ *
+ * @param {*} value  - raw dimension value
+ * @param {string} name - parameter name for error messaging
+ * @returns {number} floored, valid dimension
+ * @throws {TypeError} if value is not a finite number >= 4
+ */
+function _validateDimension(value, name) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 4) {
+    throw new TypeError(
+      name + ' must be a finite number >= 4, got ' + JSON.stringify(value)
+    );
+  }
+  return Math.floor(n);
+}
+
+// ---------------------------------------------------------------------------
 // Game
 // ---------------------------------------------------------------------------
 class Game {
   /**
    * @param {number} [gridWidth=20]
    * @param {number} [gridHeight=20]
+   * @throws {TypeError} if gridWidth or gridHeight is not a finite number >= 4
    */
   constructor(gridWidth = 20, gridHeight = 20) {
-    // Validate and clamp grid dimensions
-    this.gridWidth  = Math.max(4, Math.floor(gridWidth)  || 20);
-    this.gridHeight = Math.max(4, Math.floor(gridHeight) || 20);
+    // Strict validation – prevents NaN dimensions that would break collision
+    // detection (NaN comparisons always return false).
+    this.gridWidth  = _validateDimension(gridWidth,  'gridWidth');
+    this.gridHeight = _validateDimension(gridHeight, 'gridHeight');
 
     // Internal state
     this.snake      = [];
@@ -239,9 +268,16 @@ class Game {
 /**
  * Create a fully initialised Game instance.
  *
+ * Matches API contract:
+ *   CREATE /game-core/Game
+ *   Body: { gridWidth?: number (default 20), gridHeight?: number (default 20) }
+ *   Returns: Game instance with methods move(direction), getState(), reset(),
+ *            isGameOver(), onGameOver(callback)
+ *
  * @param {number} [gridWidth=20]
  * @param {number} [gridHeight=20]
  * @returns {Game}
+ * @throws {TypeError} if gridWidth or gridHeight is not a finite number >= 4
  */
 function create(gridWidth = 20, gridHeight = 20) {
   const game = new Game(gridWidth, gridHeight);
